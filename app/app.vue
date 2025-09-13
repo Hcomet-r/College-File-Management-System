@@ -1,3 +1,7 @@
 <template>
-  <v-btn>text</v-btn>
+  <v-app>
+    <v-main>
+      <NuxtPage /> 
+    </v-main>
+  </v-app>
 </template>
