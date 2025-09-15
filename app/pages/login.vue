@@ -7,7 +7,7 @@
             <v-card class="pa-8" elevation="8">
               <div class="text-center mb-8">
                 <h1 class="text-h4 font-weight-bold mb-2">欢迎登录</h1>
-                <p class="text-body-1 text-medium-emphasis">兰州大学文件管理系统</p>
+                <p class="text-body-1 text-medium-emphasis">数院文件管理系统</p>
               </div>
 
               <v-form v-model="isFormValid" @submit.prevent="handleSubmit">
@@ -40,19 +40,33 @@
                   class="mb-6"
                 />
 
-                <v-btn
-                  type="submit"
-                  color="primary"
-                  size="large"
-                  block
-                  :loading="isLoading"
-                  :disabled="!isFormValid"
-                >
-                  登录
-                </v-btn>
+                <div class="d-flex flex-column gap-6">
+                  <v-btn
+                    type="submit"
+                    color="primary"
+                    size="large"
+                    block
+                    :loading="isLoading"
+                    :disabled="!isFormValid"
+                  >
+                    登录
+                  </v-btn>
 
-                <div class="text-center mt-4">
-                  <a href="#" class="text-decoration-none">忘记密码？</a>
+                  <v-divider class="my-2"/>
+
+                  <v-btn
+                    color="secondary"
+                    size="large"
+                    block
+                    :disabled="isLoading"
+                    @click="handleRegister"
+                  >
+                    注册
+                  </v-btn>
+
+                  <div class="text-center">
+                    <a href="#" class="text-decoration-none">忘记密码？</a>
+                  </div>
                 </div>
               </v-form>
             </v-card>
@@ -64,8 +78,6 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const isFormValid = ref(false)
@@ -81,8 +93,7 @@ const emailRules = [
 ]
 
 const passwordRules = [
-  v => !!v || '密码不能为空',
-  v => v.length >= 6 || '密码长度至少为6位'
+  v => !!v || '密码不能为空'
 ]
 
 const handleSubmit = async () => {
@@ -98,6 +109,10 @@ const handleSubmit = async () => {
   } finally {
     isLoading.value = false
   }
+}
+
+const handleRegister = () => {
+  router.push('/signin')
 }
 </script>
 
