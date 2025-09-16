@@ -40,6 +40,10 @@
                   class="mb-6"
                 />
 
+                <div v-if="errorMessage" class="text-error mb-4 text-center">
+                  {{ errorMessage }}
+                </div>
+
                 <div class="d-flex flex-column gap-6">
                   <v-btn
                     type="submit"
@@ -86,26 +90,54 @@ const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const rememberMe = ref(false)
+const errorMessage = ref('')
+
+// 测试账号信息
+const TEST_ACCOUNT = {
+  email: 'test@lzu.edu.cn',
+  password: 'A123456'
+}
 
 const emailRules = [
   v => !!v || '邮箱地址不能为空',
-  v => /.+@.+\..+/.test(v) || '请输入有效的邮箱地址'
+  v => /.+@.+\..+/.test(v) || '请输入有效的邮箱地址',
+  v => v.endsWith('@lzu.edu.cn') || '必须使用兰州大学邮箱'
 ]
 
 const passwordRules = [
-  v => !!v || '密码不能为空'
+  v => !!v || '密码不能为空',
+  v => v.length >= 6 || '密码长度至少为6位'
 ]
 
 const handleSubmit = async () => {
   if (!isFormValid.value) return
-
+  errorMessage.value = ''
   isLoading.value = true
+
   try {
-    // 这里添加登录逻辑
-    await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟API调用
-    router.push('/')
+    // 模拟登录验证
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    if (email.value === TEST_ACCOUNT.email && password.value === TEST_ACCOUNT.password) {
+      // 保存登录状态
+      localStorage.setItem('auth_token', 'test_token')
+      localStorage.setItem('user_email', email.value)
+      
+      // 如果选择了记住我，保存额外信息
+      if (rememberMe.value) {
+        localStorage.setItem('remember_email', email.value)
+      } else {
+        localStorage.removeItem('remember_email')
+      }
+      
+      // 跳转到主页
+      router.push('/')
+    } else {
+      errorMessage.value = '邮箱或密码错误'
+    }
   } catch (error) {
     console.error('登录失败:', error)
+    errorMessage.value = '登录失败，请稍后重试'
   } finally {
     isLoading.value = false
   }
