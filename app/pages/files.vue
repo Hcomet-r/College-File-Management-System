@@ -1,11 +1,55 @@
 <template>
   <v-layout class="rounded rounded-md border">
+    <!-- 新建文件夹对话框 -->
+    <v-dialog v-model="createDialog.show" max-width="400">
+      <v-card>
+        <v-card-title class="text-h6">新建文件夹</v-card-title>
+        <v-card-text>
+          <v-text-field v-model="createDialog.name" label="文件夹名称" autofocus required />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn variant="text" @click="createDialog.show = false">取消</v-btn>
+          <v-btn color="primary" variant="tonal" @click="doCreateFolder">创建</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 重命名对话框 -->
+    <v-dialog v-model="renameDialog.show" max-width="400">
+      <v-card>
+        <v-card-title class="text-h6">重命名</v-card-title>
+        <v-card-text>
+          <v-text-field v-model="renameDialog.name" label="新名称" autofocus required />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn variant="text" @click="renameDialog.show = false">取消</v-btn>
+          <v-btn color="primary" variant="tonal" @click="doRename">确认</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 删除确认对话框 -->
+    <v-dialog v-model="deleteDialog.show" max-width="400">
+      <v-card>
+        <v-card-title class="text-h6">确认删除</v-card-title>
+        <v-card-text>
+          <div>确定将“{{ deleteDialog.name }}”移入回收站吗？</div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn variant="text" @click="deleteDialog.show = false">取消</v-btn>
+          <v-btn color="error" variant="tonal" @click="doDelete">确认删除</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-main>
       <v-card class="mx-auto">
         <v-container fluid>
           <v-row class="mb-4" align="center" justify="space-between">
             <v-col cols="12" md="8" class="d-flex align-center">
-              <v-btn color="primary" @click="triggerFilePick" :loading="uploading" :disabled="uploading">
+              <v-btn color="primary" :loading="uploading" :disabled="uploading" @click="triggerFilePick">
                 选择并上传文件
               </v-btn>
               <input
@@ -15,7 +59,7 @@
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip,.7z,.rar,.tar,.gz"
                 style="display: none"
                 @change="onFilesSelected"
-              />
+              >
               <span v-if="uploading" class="ml-3">正在上传...</span>
               <v-text-field
                 v-model="searchQuery"
@@ -27,12 +71,10 @@
                 hide-details
                 placeholder="全局搜索文件/文件夹"
                 prepend-inner-icon="mdi-magnify"
-                @update:modelValue="onSearchChange"
+                @update:model-value="onSearchChange"
               />
             </v-col>
-            <v-col cols="12" md="4" class="text-right">
-              
-            </v-col>
+            <v-col cols="12" md="4" class="text-right"/>
           </v-row>
 
           <!-- 全局搜索结果 -->
@@ -70,11 +112,13 @@
             <v-col cols="12" md="8" class="d-flex align-center">
               <span class="mr-2">当前位置：</span>
               <code class="mr-4">/uploads{{ currentPathDisplay }}</code>
-              <v-btn size="small" variant="tonal" @click="goUp" :disabled="!canGoUp">返回上级</v-btn>
+              <v-btn size="small" variant="tonal" :disabled="!canGoUp" @click="goUp">返回上级</v-btn>
             </v-col>
             <v-col cols="12" md="4" class="text-right">
               <v-btn color="primary" variant="elevated" size="small" @click="createFolder">新建文件夹</v-btn>
-              <v-btn class="ml-2" variant="tonal" size="小" @click="refreshList" :loading="loadingList">刷新</v-btn>
+                <v-btn class="ml-2" color="info" variant="elevated" size="small" :loading="loadingList" rounded prepend-icon="mdi-refresh" @click="refreshList">
+                  刷新
+                </v-btn>
             </v-col>
           </v-row>
 
@@ -105,9 +149,9 @@
                   elevation="2"
                   hover
                   :class="{ 'droppable-hover': dragHoverPath === item.path && item.type === 'folder' }"
+                  :draggable="true"
                   @click="item.type === 'folder' ? enterFolder(item) : openFile(`/uploads${item.path}`)"
                   @contextmenu.stop.prevent="onItemContextMenu($event, item)"
-                  :draggable="true"
                   @dragstart="onDragStart(item, $event)"
                   @dragover.prevent="item.type === 'folder' ? onDragOver(item) : null"
                   @dragleave.prevent="item.type === 'folder' ? onDragLeave(item) : null"
@@ -117,15 +161,15 @@
                     <Icon :name="item.type === 'folder' ? 'mdi:folder' : getFileIcon(item.name)" :size="48" :style="{ color: item.type === 'folder' ? '#f6a03c' : getFileColor(item.name) }" />
                   </div>
                   <div class="text-truncate" :title="item.name">{{ item.name }}</div>
-                  <div class="text-medium-emphasis text-caption" v-if="item.type !== 'folder'">{{ formatSize(item.size) }}</div>
+                  <div v-if="item.type !== 'folder'" class="text-medium-emphasis text-caption">{{ formatSize(item.size) }}</div>
                 </v-card>
               </v-col>
             </v-row>
             <div class="blank-spacer" />
           </div>
 
-          <div ref="itemActivator" :style="itemActivatorStyle" style="position: fixed; width: 0; height: 0;"></div>
-          <div ref="blankActivator" :style="blankActivatorStyle" style="position: fixed; width: 0; height: 0;"></div>
+          <div ref="itemActivator" :style="itemActivatorStyle" style="position: fixed; width: 0; height: 0" />
+          <div ref="blankActivator" :style="blankActivatorStyle" style="position: fixed; width: 0; height: 0" />
 
           <v-menu v-model="itemMenu.show" :close-on-content-click="false" :activator="itemActivator">
             <v-list density="compact">
@@ -150,7 +194,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+const createDialog = ref({ show: false, name: '' })
+const renameDialog = ref({ show: false, name: '', item: null })
+const deleteDialog = ref({ show: false, name: '', item: null })
+
 
 const fileInputRef = ref(null)
 const uploading = ref(false)
@@ -239,8 +286,13 @@ function goUp() {
 }
 
 async function createFolder() {
-  const name = window.prompt('请输入新建文件夹名称：')
+  createDialog.value = { show: true, name: '' }
+}
+
+async function doCreateFolder() {
+  const name = createDialog.value.name.trim()
   if (!name) return
+  createDialog.value.show = false
   try {
     await $fetch('/api/fs.mkdir', { method: 'POST', body: { path: currentPath.value, name } })
     await refreshList()
@@ -284,8 +336,14 @@ function menuCut() {
 async function menuRename() {
   const it = itemMenu.value.item
   if (!it) return
-  const newName = window.prompt('重命名为：', it.name)
-  if (!newName || newName === it.name) return
+  renameDialog.value = { show: true, name: it.name, item: it }
+}
+
+async function doRename() {
+  const it = renameDialog.value.item
+  const newName = renameDialog.value.name.trim()
+  if (!it || !newName || newName === it.name) return
+  renameDialog.value.show = false
   try {
     const rel = String(it.path).replace(/^\/+/, '')
     await $fetch('/api/fs.rename', { method: 'POST', body: { path: rel, name: newName } })
@@ -300,7 +358,13 @@ async function menuRename() {
 async function menuDelete() {
   const it = itemMenu.value.item
   if (!it) return
-  if (!window.confirm(`确定将“${it.name}”移入回收站吗？`)) return
+  deleteDialog.value = { show: true, name: it.name, item: it }
+}
+
+async function doDelete() {
+  const it = deleteDialog.value.item
+  if (!it) return
+  deleteDialog.value.show = false
   try {
     const rel = String(it.path).replace(/^\/+/, '')
     await $fetch('/api/fs.delete', { method: 'POST', body: { path: rel } })
@@ -437,11 +501,6 @@ const formatSize = (size) => {
   return `${s.toFixed(2)} ${units[i]}`
 }
 
-const cards = [
-  { title: 'Pre-fab homes', src: 'https://cdn.vuetifyjs.com/images/cards/house.jpg', flex: 12 },
-  { title: 'Favorite road trips', src: 'https://cdn.vuetifyjs.com/images/cards/road.jpg', flex: 6 },
-  { title: 'Best airlines', src: 'https://cdn.vuetifyjs.com/images/cards/plane.jpg', flex: 6 },
-]
 </script>
 <style scoped>
 .cursor-pointer { cursor: pointer; }

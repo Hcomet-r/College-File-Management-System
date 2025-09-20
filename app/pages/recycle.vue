@@ -1,5 +1,19 @@
 <template>
   <v-layout class="rounded rounded-md border">
+    <!-- 彻底删除确认对话框 -->
+    <v-dialog v-model="confirmDialog.show" max-width="400">
+      <v-card>
+        <v-card-title class="text-h6">确认彻底删除</v-card-title>
+        <v-card-text>
+          <div>确定彻底删除“{{ confirmDialog.name }}”？该操作不可恢复。</div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer/>
+          <v-btn variant="text" @click="confirmDialog.show = false">取消</v-btn>
+          <v-btn color="error" variant="tonal" @click="doDestroy">确认删除</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-main>
       <v-container>
         <v-row class="mb-2" align="center" justify="space-between">
@@ -7,7 +21,9 @@
             <h2>回收站</h2>
           </v-col>
           <v-col cols="12" md="4" class="text-right">
-            <v-btn variant="tonal" size="small" @click="refresh" :loading="loading">刷新</v-btn>
+            <v-btn class="ml-2" color="info" variant="elevated" size="small" :loading="loading" rounded prepend-icon="mdi-refresh" @click="refresh">
+              刷新
+            </v-btn>
           </v-col>
         </v-row>
 
@@ -37,10 +53,14 @@
           </v-col>
         </v-row>
 
-        <v-menu v-model="menu.show" :position-x="menu.x" :position-y="menu.y">
+        <v-menu v-model="menu.show" :activator="menu.activator" location="end" offset-y>
           <v-list density="compact">
-            <v-list-item @click="restore">恢复</v-list-item>
-            <v-list-item @click="destroy">彻底删除</v-list-item>
+            <v-list-item @click="restore">
+              <v-btn color="primary" variant="tonal" size="small" block prepend-icon="mdi-restore">恢复</v-btn>
+            </v-list-item>
+            <v-list-item @click="destroy">
+              <v-btn color="error" variant="tonal" size="small" block prepend-icon="mdi-delete">彻底删除</v-btn>
+            </v-list-item>
           </v-list>
         </v-menu>
       </v-container>
@@ -49,12 +69,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+const confirmDialog = ref({ show: false, name: '' })
+
 
 const items = ref([])
 const loading = ref(false)
 const errorMessage = ref('')
-const menu = ref({ show: false, x: 0, y: 0, item: null })
+const menu = ref({ show: false, activator: null, item: null })
 
 onMounted(() => refresh())
 
@@ -71,7 +92,7 @@ async function refresh() {
 }
 
 function onItemMenu(ev, it) {
-  menu.value = { show: true, x: ev.clientX, y: ev.clientY, item: it }
+  menu.value = { show: true, activator: ev.currentTarget, item: it }
 }
 
 async function restore() {
@@ -90,9 +111,15 @@ async function restore() {
 async function destroy() {
   const it = menu.value.item
   if (!it) return
-  if (!window.confirm(`确定彻底删除“${it.name}”？该操作不可恢复。`)) return
+  confirmDialog.value = { show: true, name: it.name }
+}
+
+async function doDestroy() {
+  const name = confirmDialog.value.name
+  if (!name) return
+  confirmDialog.value.show = false
   try {
-    await $fetch('/api/recycle.destroy', { method: 'POST', body: { name: it.name } })
+    await $fetch('/api/recycle.destroy', { method: 'POST', body: { name } })
     await refresh()
   } catch (e) {
     errorMessage.value = e?.data?.statusMessage || e?.message || '删除失败'
